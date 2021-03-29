@@ -16,6 +16,8 @@ import firrtl.{Driver => _, _}
 import treadle.chronometry.Timer
 import treadle.stage.TreadleTesterPhase
 import treadle.{TreadleTesterAnnotation, WriteVcdAnnotation}
+import chisel3.experimental.BaseModule
+import chisel3.internal.firrtl.Circuit
 
 object TesterDriver extends BackendCompilationUtilities {
 
@@ -54,10 +56,12 @@ object TesterDriver extends BackendCompilationUtilities {
                      additionalVResources: Seq[String] = Seq(),
                      annotations:          AnnotationSeq = Seq(),
                      nameHint:             Option[String] = None): Boolean = {
-    // Invoke the chisel compiler to get the circuit's IR
-    val (circuit, dut) = new chisel3.stage.ChiselGeneratorAnnotation(finishWrapper(t)).elaborate.toSeq match {
-      case Seq(ChiselCircuitAnnotation(cir), d: DesignAnnotation[_]) => (cir, d)
-    }
+
+
+    val generatorAnnotation = chisel3.stage.ChiselGeneratorAnnotation(finishWrapper(t))
+    val elaboratedAnno = (new chisel3.stage.phases.Elaborate).transform(annotations :+ generatorAnnotation)
+    val circuit = elaboratedAnno.collect { case x: ChiselCircuitAnnotation => x }.head.circuit
+    val dut = elaboratedAnno.collectFirst { case d: DesignAnnotation[_] => d }.get
 
     // Set up a bunch of file handlers based on a random temp filename,
     // plus the quirks of Verilator's naming conventions
@@ -75,7 +79,11 @@ object TesterDriver extends BackendCompilationUtilities {
     val fname = new File(path, target)
 
     // For now, dump the IR out to a file
-    Driver.dumpFirrtl(circuit, Some(new File(fname.toString + ".fir")))
+    val compiledAnnotations = (new ChiselStage).execute(
+      Array("-E", "chirrtl"),
+      elaboratedAnno :+ firrtl.options.TargetDirAnnotation(targetName)
+    )
+
     val firrtlCircuit = Driver.toFirrtl(circuit)
 
     // Copy CPP harness and other Verilog sources from resources into files
