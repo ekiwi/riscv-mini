@@ -310,7 +310,7 @@ class CacheTester(cache: => Cache)(implicit val p: freechips.rocketchip.config.P
     }
   }
 
-  when(testDone) { stop(); stop() } // from VendingMachine example...
+  when(testDone) { stop() }
 }
 
 class CacheTests extends org.scalatest.FlatSpec {

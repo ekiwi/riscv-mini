@@ -85,7 +85,7 @@ class TileTester(
     printf("cycles: %d\n", cycle)
     assert((dut.io.host.tohost >> 1.U) === 0.U,
       "* tohost: %d *\n", dut.io.host.tohost)
-    stop(); stop()
+    stop()
   }
  
   val chunk = Wire(UInt(nastiXDataBits.W))

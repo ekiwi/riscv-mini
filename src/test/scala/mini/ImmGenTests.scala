@@ -32,7 +32,7 @@ class ImmGenTester(imm: => ImmGen)(implicit p: freechips.rocketchip.config.Param
   dut.io.inst  := ctrl.io.inst
   dut.io.sel   := ctrl.io.imm_sel
 
-  when(done) { stop(); stop() } // from VendingMachine example...
+  when(done) { stop() }
   assert(dut.io.out === out)
   printf("Counter: %d, Type: 0x%x, Out: %x ?= %x\n",
          cntr, dut.io.sel, dut.io.out, out)

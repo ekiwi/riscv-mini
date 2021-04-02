@@ -44,7 +44,7 @@ class ALUTester(alu: => ALU)(implicit p: freechips.rocketchip.config.Parameters)
   dut.io.A := VecInit(rs1 map (_.U))(cntr)
   dut.io.B := VecInit(rs2 map (_.U))(cntr)
 
-  when(done) { stop(); stop() } // from VendingMachine example...
+  when(done) { stop() }
   assert(dut.io.out === out._1)
   assert(dut.io.sum === out._2)
   printf("Counter: %d, OP: 0x%x, A: 0x%x, B: 0x%x, OUT: 0x%x ?= 0x%x, SUM: 0x%x ?= 0x%x\n",

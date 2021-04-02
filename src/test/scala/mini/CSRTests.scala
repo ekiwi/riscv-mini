@@ -218,7 +218,7 @@ class CSRTester(c: => CSR, trace: Boolean = false)(implicit p: freechips.rocketc
   epc := regs(CSR.mepc.litValue())
   evec := regs(CSR.mtvec.litValue()) + (prv << 6.U).asUInt
 
-  when(done) { stop(); stop() } // from VendingMachine example...
+  when(done) { stop() }
   when(cntr.orR) {
     assert(dut.io.out  === rdata)
     assert(dut.io.epc  === epc)

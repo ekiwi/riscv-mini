@@ -42,7 +42,7 @@ class BrCondTester(br: => BrCond)(implicit p: freechips.rocketchip.config.Parame
   dut.io.rs1 := VecInit(rs1 map (_.U))(cntr)
   dut.io.rs2 := VecInit(rs2 map (_.U))(cntr)
 
-  when(done) { stop(); stop() } // from VendingMachine example...
+  when(done) { stop() }
   assert(dut.io.taken === out)
   printf("Counter: %d, BrType: 0x%x, rs1: 0x%x, rs2: 0x%x, Taken: %d ?= %d\n",
          cntr, dut.io.br_type, dut.io.rs1, dut.io.rs2, dut.io.taken, out)

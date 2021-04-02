@@ -61,7 +61,7 @@ class DatapathTester(datapath: => Datapath,
       when(dut.io.host.tohost =/= 0.U) {
         assert(dut.io.host.tohost === testResults(testType).U,
                s"* tohost: %d != ${testResults(testType)} *", dut.io.host.tohost)
-        stop(); stop()
+        stop()
       }
     }
   }
