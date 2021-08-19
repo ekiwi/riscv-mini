@@ -11,3 +11,5 @@ VTile
 dump.vcd*
 DVEfiles
 riscv-tools-priv1.7
+/.idea/
+/gen/
