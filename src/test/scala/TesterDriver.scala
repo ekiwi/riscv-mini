@@ -3,21 +3,17 @@
 package mini
 
 import java.io._
-
 import chisel3._
-import chisel3.experimental.RunFirrtlTransform
-import chisel3.stage.phases.AspectPhase
 import chisel3.stage.{ChiselCircuitAnnotation, ChiselStage, DesignAnnotation, NoRunFirrtlCompilerAnnotation}
 import chisel3.testers.BasicTester
+import firrtl.{AnnotationSeq, FileUtils}
 import firrtl.annotations.NoTargetAnnotation
 import firrtl.options.Unserializable
 import firrtl.transforms.BlackBoxSourceHelper.writeResourceToDirectory
-import firrtl.{Driver => _, _}
 import treadle.chronometry.Timer
 import treadle.stage.TreadleTesterPhase
 import treadle.{TreadleTesterAnnotation, WriteVcdAnnotation}
-import chisel3.experimental.BaseModule
-import chisel3.internal.firrtl.Circuit
+import firrtl.stage.FirrtlStage
 
 object TesterDriver extends BackendCompilationUtilities {
 
@@ -48,6 +44,8 @@ object TesterDriver extends BackendCompilationUtilities {
         executeVerilog(t, additionalVResources, annotations, nameHint)
     }.reduce(_ && _)
   }
+
+  private def firrtlStage = new FirrtlStage
 
   /** For use with modules that should successfully be elaborated by the
     * frontend, and which can be turned into executables with assertions.
@@ -84,8 +82,6 @@ object TesterDriver extends BackendCompilationUtilities {
       elaboratedAnno :+ firrtl.options.TargetDirAnnotation(targetName)
     )
 
-    val firrtlCircuit = Driver.toFirrtl(circuit)
-
     // Copy CPP harness and other Verilog sources from resources into files
     val cppHarness =  new File(path, "top.cpp")
     copyResourceToFile("/chisel3/top.cpp", cppHarness)
@@ -98,23 +94,10 @@ object TesterDriver extends BackendCompilationUtilities {
     })
 
     // Compile firrtl
-    val transforms = circuit.annotations.collect {
-      case anno: RunFirrtlTransform => anno.transformClass
-    }.distinct
-      .filterNot(_ == classOf[Transform])
-      .map { transformClass: Class[_ <: Transform] => transformClass.newInstance() }
-    val newAnnotations = circuit.annotations.map(_.toFirrtl).toList ++ annotations ++ Seq(dut)
-    val resolvedAnnotations = new AspectPhase().transform(newAnnotations).toList
-    val optionsManager = new ExecutionOptionsManager("chisel3") with HasChiselExecutionOptions with HasFirrtlOptions {
-      commonOptions = CommonOptions(topName = target, targetDirName = path.getAbsolutePath)
-      firrtlOptions = FirrtlExecutionOptions(compilerName = "verilog", annotations = resolvedAnnotations,
-        customTransforms = transforms,
-        firrtlCircuit = Some(firrtlCircuit))
-    }
-    firrtl.Driver.execute(optionsManager) match {
-      case _: FirrtlExecutionFailure => return false
-      case _ =>
-    }
+    val res = firrtlStage.execute(
+      args = Array("-E", "verilog"),
+      annotations = compiledAnnotations
+    )
 
     // Use sys.Process to invoke a bunch of backend stuff, then run the resulting exe
     if ((verilogToCpp(target, path, additionalVFiles, cppHarness) #&&
@@ -152,7 +135,7 @@ object TesterDriver extends BackendCompilationUtilities {
       case _          => ""
     }) + "_treadle"
 
-    annotationSeq = annotationSeq :+ TargetDirAnnotation(targetName)
+    annotationSeq = annotationSeq :+ firrtl.options.TargetDirAnnotation(targetName)
 
     // This generates the firrtl circuit needed by the TreadleTesterPhase
     annotationSeq = (new ChiselStage).run(
@@ -160,7 +143,7 @@ object TesterDriver extends BackendCompilationUtilities {
     )
 
     // This generates a TreadleTesterAnnotation with a treadle tester instance
-    annotationSeq = TreadleTesterPhase.transform(annotationSeq)
+    annotationSeq = (new TreadleTesterPhase).transform(annotationSeq)
 
     val treadleTester = annotationSeq.collectFirst { case TreadleTesterAnnotation(t) => t }.getOrElse(
       throw new Exception(
