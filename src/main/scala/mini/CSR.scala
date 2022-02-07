@@ -99,7 +99,7 @@ object Cause {
   val Ecall = 0x8.U
 }
 
-class CSRIO(implicit p: Parameters) extends CoreBundle()(p) {
+class CSRIO(xlen: Int) extends Bundle {
   val stall = Input(Bool())
   val cmd = Input(UInt(3.W))
   val in = Input(UInt(xlen.W))
@@ -119,8 +119,8 @@ class CSRIO(implicit p: Parameters) extends CoreBundle()(p) {
   val host = new HostIO
 }
 
-class CSR(implicit val p: Parameters) extends Module with CoreParams {
-  val io = IO(new CSRIO)
+class CSR(xlen: Int) extends Module {
+  val io = IO(new CSRIO(xlen))
 
   val csr_addr = io.inst(31, 20)
   val rs1_addr = io.inst(19, 15)

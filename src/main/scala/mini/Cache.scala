@@ -8,27 +8,29 @@ import junctions._
 import config.{Field, Parameters}
 
 case object NWays extends Field[Int]
+
 case object NSets extends Field[Int]
+
 case object CacheBlockBytes extends Field[Int]
 
-class CacheReq(implicit p: Parameters) extends CoreBundle()(p) {
-  val addr = UInt(xlen.W)
-  val data = UInt(xlen.W)
-  val mask = UInt((xlen / 8).W)
+class CacheReq(addrWidth: Int, dataWidth: Int) extends Bundle {
+  val addr = UInt(addrWidth.W)
+  val data = UInt(dataWidth.W)
+  val mask = UInt((dataWidth / 8).W)
 }
 
-class CacheResp(implicit p: Parameters) extends CoreBundle()(p) {
-  val data = UInt(xlen.W)
+class CacheResp(dataWidth: Int) extends Bundle {
+  val data = UInt(dataWidth.W)
 }
 
-class CacheIO(implicit val p: Parameters) extends Bundle {
+class CacheIO(addrWidth: Int, dataWidth: Int) extends Bundle {
   val abort = Input(Bool())
-  val req = Flipped(Valid(new CacheReq))
-  val resp = Valid(new CacheResp)
+  val req = Flipped(Valid(new CacheReq(addrWidth, dataWidth)))
+  val resp = Valid(new CacheResp(dataWidth))
 }
 
-class CacheModuleIO(implicit val p: Parameters) extends Bundle {
-  val cpu = new CacheIO
+class CacheModuleIO(addrWidth: Int, dataWidth: Int) extends Bundle {
+  val cpu = new CacheIO(addrWidth, dataWidth)
   val nasti = new NastiIO
 }
 
@@ -139,7 +141,9 @@ class Cache(implicit val p: Parameters) extends Module with CacheParams {
   io.nasti.ar.valid := false.B
   // read data
   io.nasti.r.ready := state === s_REFILL
-  when(io.nasti.r.fire) { refill_buf(read_count) := io.nasti.r.bits.data }
+  when(io.nasti.r.fire) {
+    refill_buf(read_count) := io.nasti.r.bits.data
+  }
 
   // write addr
   io.nasti.aw.bits := NastiWriteAddressChannel(

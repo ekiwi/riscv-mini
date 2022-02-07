@@ -8,7 +8,7 @@ import config.{Field, Parameters}
 
 case object XLEN extends Field[Int]
 case object Trace extends Field[Boolean]
-case object BuildALU extends Field[Parameters => ALU]
+case object BuildALU extends Field[Parameters => Alu]
 case object BuildImmGen extends Field[Parameters => ImmGen]
 case object BuildBrCond extends Field[Parameters => BrCond]
 
@@ -19,7 +19,7 @@ abstract trait CoreParams {
 
 abstract class CoreBundle(implicit val p: Parameters) extends Bundle with CoreParams
 
-class HostIO(implicit p: Parameters) extends CoreBundle()(p) {
+class HostIO(xlen: Int) {
   val fromhost = Flipped(Valid(UInt(xlen.W)))
   val tohost = Output(UInt(xlen.W))
 }
