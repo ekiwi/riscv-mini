@@ -116,7 +116,7 @@ class CSRIO(xlen: Int) extends Bundle {
   val evec = Output(UInt(xlen.W))
   val epc = Output(UInt(xlen.W))
   // HTIF
-  val host = new HostIO
+  val host = new HostIO(xlen)
 }
 
 class CSR(xlen: Int) extends Module {
