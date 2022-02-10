@@ -119,6 +119,7 @@ class CSRIO(xlen: Int) extends Bundle {
 }
 
 class CSR(val xlen: Int) extends Module {
+  require(xlen == 32, "currently RV64 is not implemented")
   val io = IO(new CSRIO(xlen))
 
   val csr_addr = io.inst(31, 20)

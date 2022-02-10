@@ -11,12 +11,7 @@ object Main extends App {
   new chisel3.stage.ChiselStage().execute(
     args,
     Seq(
-      ChiselGeneratorAnnotation(() =>
-        new Tile(
-          coreParams = config.core,
-          nastiParams = config.nasti,
-          cacheParams = config.cache
-        )
+      ChiselGeneratorAnnotation(() => Tile(config)
       ),
       TargetDirAnnotation(targetDirectory)
     )
