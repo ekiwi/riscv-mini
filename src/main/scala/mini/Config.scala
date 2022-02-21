@@ -2,7 +2,7 @@
 
 package mini
 
-import junctions.NastiBundleParameters
+import axi4.NastiBundleParameters
 
 case class Config(core: CoreConfig, cache: CacheConfig, nasti: NastiBundleParameters)
 

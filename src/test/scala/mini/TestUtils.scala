@@ -5,7 +5,7 @@ package mini
 import chisel3._
 import chisel3.util._
 import Instructions._
-import junctions.NastiBundleParameters
+import axi4.NastiBundleParameters
 import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.language.implicitConversions

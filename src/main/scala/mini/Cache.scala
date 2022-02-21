@@ -5,7 +5,7 @@ package mini
 import chisel3._
 import chisel3.experimental.ChiselEnum
 import chisel3.util._
-import junctions._
+import axi4._
 
 class CacheReq(addrWidth: Int, dataWidth: Int) extends Bundle {
   val addr = UInt(addrWidth.W)
@@ -130,7 +130,7 @@ class Cache(val p: CacheConfig, val nasti: NastiBundleParameters, val xlen: Int)
     }
   }
 
-  io.nasti.ar.bits := NastiAddressBundle(nasti)(
+  io.nasti.ar.bits := Axi4AddressBundle(nasti)(
     0.U,
     (Cat(tag_reg, idx_reg) << blen.U).asUInt,
     log2Up(nasti.dataBits / 8).U,
@@ -144,7 +144,7 @@ class Cache(val p: CacheConfig, val nasti: NastiBundleParameters, val xlen: Int)
   }
 
   // write addr
-  io.nasti.aw.bits := NastiAddressBundle(nasti)(
+  io.nasti.aw.bits := Axi4AddressBundle(nasti)(
     0.U,
     (Cat(rmeta.tag, idx_reg) << blen.U).asUInt,
     log2Up(nasti.dataBits / 8).U,

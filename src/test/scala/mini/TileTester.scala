@@ -8,7 +8,7 @@ import chisel3.testers._
 import chisel3.util._
 import chisel3.util.experimental.loadMemoryFromFileInline
 import chiseltest._
-import junctions._
+import axi4._
 import org.scalatest.flatspec.AnyFlatSpec
 
 object TileTesterState extends ChiselEnum {

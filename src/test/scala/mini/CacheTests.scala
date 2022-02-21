@@ -6,7 +6,7 @@ import chisel3._
 import chisel3.experimental.ChiselEnum
 import chisel3.util._
 import chisel3.testers._
-import junctions._
+import axi4._
 import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -65,9 +65,9 @@ class GoldCache(p: CacheConfig, nasti: NastiBundleParameters, xlen: Int) extends
   io.resp.bits.data := readData >> ((off / 4.U) * xlen.U)
   io.resp.valid := false.B
   io.req.ready := false.B
-  io.nasti.ar.bits := NastiAddressBundle(nasti)(0.U, ((req.addr >> blen.U).asUInt << blen.U).asUInt, size, len)
+  io.nasti.ar.bits := Axi4AddressBundle(nasti)(0.U, ((req.addr >> blen.U).asUInt << blen.U).asUInt, size, len)
   io.nasti.ar.valid := false.B
-  io.nasti.aw.bits := NastiAddressBundle(nasti)(0.U, (Cat(tags(idx), idx) << blen.U).asUInt, size, len)
+  io.nasti.aw.bits := Axi4AddressBundle(nasti)(0.U, (Cat(tags(idx), idx) << blen.U).asUInt, size, len)
   io.nasti.aw.valid := false.B
   io.nasti.w.bits := NastiWriteDataBundle(nasti)((readData >> (wCnt * nasti.dataBits.U)).asUInt, None, wDone)
   io.nasti.w.valid := state === sWrite

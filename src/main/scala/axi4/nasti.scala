@@ -1,39 +1,10 @@
 // See LICENSE.Berkeley for license details.
 // See LICENSE.SiFive for license details.
 
-package junctions
+package axi4
 import chisel3._
 import chisel3.util._
 
-object NastiConstants {
-  // These are all fixed by the standard:
-  val LenBits = 8
-  val SizeBits = 3
-  val BurstBits = 2
-  val LockBits = 1
-  val CacheBits = 4
-  val ProtBits = 3
-  val QosBits = 4
-  val RespBits = 2
-
-  def CacheReadAllocate = 8.U(CacheBits.W)
-  def CacheWriteAllocate = 4.U(CacheBits.W)
-  def CacheModifiable = 2.U(CacheBits.W)
-  def CacheBufferable = 1.U(CacheBits.W)
-
-  def ProtPrivileged = 1.U(ProtBits.W)
-  def ProtInsecure = 2.U(ProtBits.W)
-  def ProtInstruction = 4.U(ProtBits.W)
-
-  def BurstFixed = 0.U(BurstBits.W)
-  def BurstIncr = 1.U(BurstBits.W)
-  def BurstWrap = 2.U(BurstBits.W)
-
-  def RespOkay = 0.U(RespBits.W)
-  def RespExOkay = 1.U(RespBits.W)
-  def RespSlvErr = 2.U(RespBits.W)
-  def RespDevErr = 3.U(RespBits.W)
-}
 
 case class NastiBundleParameters(
   addrBits: Int,
@@ -46,21 +17,22 @@ case class NastiBundleParameters(
 }
 
 /** aka the AW/AR channel */
-class NastiAddressBundle(params: NastiBundleParameters) extends Bundle {
+class Axi4AddressBundle(params: Axi4BundleParameters, userBits: Int = 0) extends Bundle {
   val id = UInt(params.idBits.W)
   val addr = UInt(params.addrBits.W)
-  val len = UInt(NastiConstants.LenBits.W) // number of beats - 1
-  val size = UInt(NastiConstants.SizeBits.W) // bytes in beat = 2^size
-  val burst = UInt(NastiConstants.BurstBits.W)
-  val lock = UInt(NastiConstants.LockBits.W)
-  val cache = UInt(NastiConstants.CacheBits.W)
-  val prot = UInt(NastiConstants.ProtBits.W)
-  val qos = UInt(NastiConstants.QosBits.W) // 0=no QoS, bigger = higher priority
+  val len = UInt(Axi4Constants.LenBits.W) // number of beats - 1
+  val size = UInt(Axi4Constants.SizeBits.W) // bytes in beat = 2^size
+  val burst = UInt(Axi4Constants.BurstBits.W)
+  val lock = UInt(Axi4Constants.LockBits.W)
+  val cache = UInt(Axi4Constants.CacheBits.W)
+  val prot = UInt(Axi4Constants.ProtBits.W)
+  val qos = UInt(Axi4Constants.QosBits.W) // 0=no QoS, bigger = higher priority
+  val user = UInt(userBits.W)
 }
 
-object NastiAddressBundle {
-  def apply(params: NastiBundleParameters)(id: UInt, addr: UInt, size: UInt, len: UInt = 0.U): NastiAddressBundle = {
-    val aw = Wire(new NastiAddressBundle(params))
+object Axi4AddressBundle {
+  def apply(params: NastiBundleParameters)(id: UInt, addr: UInt, size: UInt, len: UInt = 0.U): Axi4AddressBundle = {
+    val aw = Wire(new Axi4AddressBundle(params))
     aw.id := id
     aw.addr := addr
     aw.len := len
@@ -138,9 +110,9 @@ object NastiWriteResponseBundle {
 }
 
 class NastiBundle(params: NastiBundleParameters) extends Bundle {
-  val aw = Decoupled(new NastiAddressBundle(params))
+  val aw = Decoupled(new Axi4AddressBundle(params))
   val w = Decoupled(new NastiWriteDataBundle(params))
   val b = Flipped(Decoupled(new NastiWriteResponseBundle(params)))
-  val ar = Decoupled(new NastiAddressBundle(params))
+  val ar = Decoupled(new Axi4AddressBundle(params))
   val r = Flipped(Decoupled(new NastiReadDataBundle(params)))
 }

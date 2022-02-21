@@ -5,7 +5,7 @@ package mini
 import chisel3._
 import chisel3.experimental.ChiselEnum
 import chisel3.util._
-import junctions._
+import axi4._
 
 class MemArbiterIO(params: NastiBundleParameters) extends Bundle {
   val icache = Flipped(new NastiBundle(params))
@@ -42,7 +42,7 @@ class MemArbiter(params: NastiBundleParameters) extends Module {
   io.icache.b := DontCare
 
   // Read Address
-  io.nasti.ar.bits := NastiAddressBundle(params)(
+  io.nasti.ar.bits := Axi4AddressBundle(params)(
     Mux(io.dcache.ar.valid, io.dcache.ar.bits.id, io.icache.ar.bits.id),
     Mux(io.dcache.ar.valid, io.dcache.ar.bits.addr, io.icache.ar.bits.addr),
     Mux(io.dcache.ar.valid, io.dcache.ar.bits.size, io.icache.ar.bits.size),
