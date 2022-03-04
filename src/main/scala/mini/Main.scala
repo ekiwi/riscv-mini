@@ -3,7 +3,9 @@
 package mini
 
 import chisel3.stage.ChiselGeneratorAnnotation
-import firrtl.options.TargetDirAnnotation
+import firrtl.options.{Dependency, TargetDirAnnotation}
+import firrtl.stage.RunFirrtlTransformAnnotation
+import instrumentation.MuxControlSignalPass
 
 object Main extends App {
   val targetDirectory = args.head
@@ -18,7 +20,8 @@ object Main extends App {
           cacheParams = config.cache
         )
       ),
-      TargetDirAnnotation(targetDirectory)
+      TargetDirAnnotation(targetDirectory),
+      RunFirrtlTransformAnnotation(Dependency(MuxControlSignalPass)),
     )
   )
 }
