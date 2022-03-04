@@ -4,7 +4,6 @@
 
 package instrumentation
 
-
 import firrtl._
 import firrtl.annotations._
 import firrtl.options.Dependency
@@ -12,7 +11,6 @@ import firrtl.stage.Forms
 import firrtl.transforms.DontTouchAnnotation
 
 import scala.collection.mutable
-
 
 /** Tags a module that should not have any coverage added.
   *  This annotation should be respected by all automated coverage passes.
@@ -53,10 +51,10 @@ object MuxControlSignalPass extends Transform with DependencyAPIMigration {
   }
 
   private def onModule(
-    m:             ir.DefModule,
-    ignoreSet:     Set[String],
-    c:             CircuitTarget,
-    newAnnos:      mutable.ListBuffer[Annotation],
+    m:         ir.DefModule,
+    ignoreSet: Set[String],
+    c:         CircuitTarget,
+    newAnnos:  mutable.ListBuffer[Annotation]
   ): ir.DefModule = m match {
     case mod: ir.Module if !ignoreSet.contains(mod.name) =>
       val mTarget = c.module(mod.name)
@@ -81,7 +79,8 @@ object MuxControlSignalPass extends Transform with DependencyAPIMigration {
   }
 
   private def removeLeadingUnderscore(name: String): String =
-    if(name.startsWith("_")) { removeLeadingUnderscore(name.drop(1)) } else { name }
+    if (name.startsWith("_")) { removeLeadingUnderscore(name.drop(1)) }
+    else { name }
 
   private def collectModulesToIgnore(state: CircuitState): Set[String] = {
     val main = state.circuit.main
@@ -89,10 +88,9 @@ object MuxControlSignalPass extends Transform with DependencyAPIMigration {
   }
 
   private case class ModuleCtx(
-    m:             ModuleTarget,
-    namespace:     Namespace,
-    newAnnos:      mutable.ListBuffer[Annotation],
-  )
+    m:         ModuleTarget,
+    namespace: Namespace,
+    newAnnos:  mutable.ListBuffer[Annotation])
 
   // returns a list of unique (at least structurally unique!) mux conditions used in the module
   private def findMuxConditions(m: ir.Module): List[ir.Expression] = {
