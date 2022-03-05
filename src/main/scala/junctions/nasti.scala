@@ -32,7 +32,7 @@ object NastiConstants {
   def RespOkay = 0.U(RespBits.W)
   def RespExOkay = 1.U(RespBits.W)
   def RespSlvErr = 2.U(RespBits.W)
-  def RespDevErr = 3.U(RespBits.W)
+  def RespDecErr = 3.U(RespBits.W)
 }
 
 case class NastiBundleParameters(
