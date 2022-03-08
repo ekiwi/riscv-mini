@@ -27,7 +27,8 @@ object MuxControlSignalPass extends Transform with DependencyAPIMigration {
   override def prerequisites = Seq(
     Dependency[firrtl.transforms.RemoveWires],
     Dependency(passes.ExpandWhens),
-    Dependency(passes.LowerTypes)
+    Dependency(passes.LowerTypes),
+    Dependency(KeepClockAndResetPass),
   )
   override def invalidates(a: Transform) = false
 
@@ -37,9 +38,9 @@ object MuxControlSignalPass extends Transform with DependencyAPIMigration {
     Dependency[firrtl.transforms.DeadCodeElimination]
   )
 
-  override def optionalPrerequisiteOf = Forms.LowEmitters
-
-  override def optionalPrerequisites = Optimizations
+  // need to run _before_ optimizations, because otherwise, the whole circuit might be dead code eliminated
+  override def optionalPrerequisiteOf = Forms.LowEmitters ++ Optimizations
+  override def optionalPrerequisites = Seq()
 
   override def execute(state: CircuitState): CircuitState = {
     val c = CircuitTarget(state.circuit.main)
@@ -49,6 +50,8 @@ object MuxControlSignalPass extends Transform with DependencyAPIMigration {
     //println(circuit.serialize)
     state.copy(circuit = circuit, annotations = newAnnos.toList ++: state.annotations)
   }
+
+  private val AddCover = true
 
   private def onModule(
     m:         ir.DefModule,
@@ -63,6 +66,8 @@ object MuxControlSignalPass extends Transform with DependencyAPIMigration {
       // we create nodes for all mux conditions because that will allow us to have them identified through the
       // trace suffix
       var count = 0
+      lazy val clock = Builder.findClock(mod)
+      lazy val reset = Builder.findReset(mod)
       val nodes = conds.map { cond =>
         val prefix = cond match {
           case ir.Reference(name, _, _, _) => removeLeadingUnderscore(name)
@@ -72,7 +77,13 @@ object MuxControlSignalPass extends Transform with DependencyAPIMigration {
         }
         val name = namespace.newName(prefix + TraceSuffix)
         newAnnos.append(DontTouchAnnotation(mTarget.ref(name)))
-        ir.DefNode(ir.NoInfo, name, cond)
+        val node = ir.DefNode(ir.NoInfo, name, cond)
+        if(!AddCover) { node } else {
+          val nodeRef = ir.Reference(node)
+          val pos = ir.Verification(ir.Formal.Cover, ir.NoInfo, clock, nodeRef, Utils.not(reset), ir.StringLit(""), namespace.newName("cover_" + node.name))
+          val neg = ir.Verification(ir.Formal.Cover, ir.NoInfo, clock, Utils.not(nodeRef), Utils.not(reset), ir.StringLit(""), namespace.newName("cover_not_" + node.name))
+          ir.Block(node, pos, neg)
+        }
       }
       mod.copy(body = ir.Block(mod.body +: nodes))
     case other => other

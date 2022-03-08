@@ -12,14 +12,10 @@ object Main extends App {
   val targetDirectory = args.head
   val config = MiniConfig()
   new chisel3.stage.ChiselStage().execute(
-    Array("-ll", "info"),
+    Array("-ll", "info", "-E", "sverilog"),
     Seq(
       ChiselGeneratorAnnotation(() =>
-        new Tile(
-          coreParams = config.core,
-          nastiParams = config.nasti,
-          cacheParams = config.cache
-        )
+        new TileAndMemTop(config)
       ),
       TargetDirAnnotation(targetDirectory),
       RunFirrtlTransformAnnotation(Dependency(MuxControlSignalPass)),
