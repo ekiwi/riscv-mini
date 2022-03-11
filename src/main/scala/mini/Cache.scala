@@ -35,6 +35,7 @@ class MetaData(tagLength: Int) extends Bundle {
 }
 
 object CacheState extends ChiselEnum {
+  //   0           1          2          3            4          5           6
   val sIdle, sReadCache, sWriteCache, sWriteBack, sWriteAck, sRefillReady, sRefill = Value
 }
 
