@@ -28,7 +28,7 @@ object MuxControlSignalPass extends Transform with DependencyAPIMigration {
     Dependency[firrtl.transforms.RemoveWires],
     Dependency(passes.ExpandWhens),
     Dependency(passes.LowerTypes),
-    Dependency(KeepClockAndResetPass),
+    Dependency(KeepClockAndResetPass)
   )
   override def invalidates(a: Transform) = false
 
@@ -78,10 +78,27 @@ object MuxControlSignalPass extends Transform with DependencyAPIMigration {
         val name = namespace.newName(prefix + TraceSuffix)
         newAnnos.append(DontTouchAnnotation(mTarget.ref(name)))
         val node = ir.DefNode(ir.NoInfo, name, cond)
-        if(!AddCover) { node } else {
+        if (!AddCover) { node }
+        else {
           val nodeRef = ir.Reference(node)
-          val pos = ir.Verification(ir.Formal.Cover, ir.NoInfo, clock, nodeRef, Utils.not(reset), ir.StringLit(""), namespace.newName("cover_" + node.name))
-          val neg = ir.Verification(ir.Formal.Cover, ir.NoInfo, clock, Utils.not(nodeRef), Utils.not(reset), ir.StringLit(""), namespace.newName("cover_not_" + node.name))
+          val pos = ir.Verification(
+            ir.Formal.Cover,
+            ir.NoInfo,
+            clock,
+            nodeRef,
+            Utils.not(reset),
+            ir.StringLit(""),
+            namespace.newName("cover_" + node.name)
+          )
+          val neg = ir.Verification(
+            ir.Formal.Cover,
+            ir.NoInfo,
+            clock,
+            Utils.not(nodeRef),
+            Utils.not(reset),
+            ir.StringLit(""),
+            namespace.newName("cover_not_" + node.name)
+          )
           ir.Block(node, pos, neg)
         }
       }

@@ -12,9 +12,9 @@ import instrumentation.Builder.getKind
 import scala.collection.mutable
 
 /** Analyses which signals in a module always have the same value (are aliases of each other).
- *  @note will only work on low firrtl!
- *  @note right now this isn't an actual firrtl pass, but an analysis called into from a firrtl pass.
- */
+  *  @note will only work on low firrtl!
+  *  @note right now this isn't an actual firrtl pass, but an analysis called into from a firrtl pass.
+  */
 object AliasAnalysis {
   type Aliases = Seq[List[String]]
   type Result = Map[String, Aliases]
@@ -47,30 +47,37 @@ object AliasAnalysis {
 
   // Incorporate the alias information from all sub modules.
   // This matters if the submodule has an input and an output that aliases.
-  private def resolveAliases(m: ir.Module, local: LocalInfo, portAliases: String => PortAliases,
-    instances: Seq[InstanceKey]): Seq[List[String]] = {
+  private def resolveAliases(
+    m:           ir.Module,
+    local:       LocalInfo,
+    portAliases: String => PortAliases,
+    instances:   Seq[InstanceKey]
+  ): Seq[List[String]] = {
     // compute any port aliases for all child modules
-    val instancePortAliases = instances.flatMap { case InstanceKey(name, module) =>
-      portAliases(module).map { case (a,b) =>
-        (name + "." + a) -> (name + "." + b)
-      }
+    val instancePortAliases = instances.flatMap {
+      case InstanceKey(name, module) =>
+        portAliases(module).map {
+          case (a, b) =>
+            (name + "." + a) -> (name + "." + b)
+        }
     }.toMap
 
     // if there are no port aliases in the children, nothing is going to change
-    if(instancePortAliases.isEmpty) return local.groups
+    if (instancePortAliases.isEmpty) return local.groups
 
     // we need to create a new group for signals that are not aliased when just looking at the local module,
     // but are aliased through a connection in a submodule
-    val isAliasedPort = instancePortAliases.flatMap{ case (a,b) => List(a,b) }.toSet
+    val isAliasedPort = instancePortAliases.flatMap { case (a, b) => List(a, b) }.toSet
     val isGroupedSignal = local.groups.flatten.toSet
     val singleSignalGroups = (isAliasedPort -- isGroupedSignal).toList.sorted.map(List(_))
     val localGroups = local.groups ++ singleSignalGroups
 
     // build a map from (aliasing) instance port to group id
     val localGroupsWithIds = localGroups.zipWithIndex
-    val instPortToGroupId = localGroupsWithIds.flatMap { case (g, ii) =>
-      val ips = g.filter(isAliasedPort(_))
-      ips.map(i => i -> ii)
+    val instPortToGroupId = localGroupsWithIds.flatMap {
+      case (g, ii) =>
+        val ips = g.filter(isAliasedPort(_))
+        ips.map(i => i -> ii)
     }.toMap
 
     // check to see if there are any groups that need to be merged
@@ -86,7 +93,7 @@ object AliasAnalysis {
       assert(ports.length < 32, s"Unexpected exponential blowup! Redesign the data-structure! $ports")
       ports.flatMap { a =>
         ports.flatMap { b =>
-          if(a == b) None else Some(a -> b)
+          if (a == b) None else Some(a -> b)
         }
       }
     }.toList
@@ -95,26 +102,29 @@ object AliasAnalysis {
   private def findMerges(aliases: Iterable[(String, String)], signalToGroupId: Map[String, Int]): List[Set[Int]] = {
     // check to see if there are any groups that need to be merged
     var merges = List[Set[Int]]()
-    aliases.foreach { case (a,b) =>
-      val (aId, bId) = (signalToGroupId(a), signalToGroupId(b))
-      if(aId != bId) {
-        val merge = Set(aId, bId)
-        // update merges
-        val bothNew = !merges.exists(s => (s & merge).nonEmpty)
-        if(bothNew) {
-          merges = merge +: merges
-        } else {
-          merges = merges.map { old =>
-            if((old & merge).nonEmpty) { old | merge } else { old }
-          }.distinct
+    aliases.foreach {
+      case (a, b) =>
+        val (aId, bId) = (signalToGroupId(a), signalToGroupId(b))
+        if (aId != bId) {
+          val merge = Set(aId, bId)
+          // update merges
+          val bothNew = !merges.exists(s => (s & merge).nonEmpty)
+          if (bothNew) {
+            merges = merge +: merges
+          } else {
+            merges = merges.map { old =>
+              if ((old & merge).nonEmpty) { old | merge }
+              else { old }
+            }.distinct
+          }
         }
-      }
     }
     merges
   }
 
   private def mergeGroups(groups: Seq[List[String]], merges: List[Set[Int]]): Seq[List[String]] = {
-    if(merges.isEmpty) { groups } else {
+    if (merges.isEmpty) { groups }
+    else {
       val merged = merges.map { m =>
         m.toList.sorted.flatMap(i => groups(i))
       }
@@ -123,7 +133,6 @@ object AliasAnalysis {
       merged ++ unmerged
     }
   }
-
 
   private def findAliases(m: ir.DefModule): LocalInfo = m match {
     case mod: ir.Module => findAliasesM(mod)
@@ -153,7 +162,7 @@ object AliasAnalysis {
           val aliases = getAliases(sig, cons)
           val groupId = aliases.find(a => signalToGroup.contains(a)) match {
             case Some(key) => signalToGroup(key)
-            case None => groups.append(List()) ; groups.length - 1
+            case None      => groups.append(List()); groups.length - 1
           }
           groups(groupId) = sig +: groups(groupId)
           aliases.foreach(a => signalToGroup(a) = groupId)
@@ -162,7 +171,7 @@ object AliasAnalysis {
     groups.toSeq
   }
   private def getAliases(name: String, cons: Connects): List[String] = cons.get(name) match {
-    case None => List(name)
+    case None    => List(name)
     case Some(a) => name +: getAliases(a, cons)
   }
   private def onStmt(s: ir.Statement, cons: Connects): Unit = s match {

@@ -14,21 +14,29 @@ import scala.collection.mutable
   * Some of these convenience functions could be moved to firrtl at some point.
   */
 object Builder {
+
   /** Fails if there isn't exactly one Clock input */
   def findClock(m: ir.Module): ir.RefLikeExpression = {
     val clocks = findClocks(m)
-    assert(clocks.length == 1, s"[${m.name}] This transformation only works if there is exactly one clock.\n" +
-      s"Found: ${clocks.map(_.serialize)}\n")
+    assert(
+      clocks.length == 1,
+      s"[${m.name}] This transformation only works if there is exactly one clock.\n" +
+        s"Found: ${clocks.map(_.serialize)}\n"
+    )
     clocks.head
   }
 
   def findClock(mod: ir.Module, logger: Logger): Option[ir.RefLikeExpression] = {
     val clocks = Builder.findClocks(mod)
-    if(clocks.isEmpty) {
+    if (clocks.isEmpty) {
       logger.warn(s"WARN: [${mod.name}] found no clock input, skipping ...")
     }
-    if(clocks.length > 1) {
-      logger.warn(s"WARN: [${mod.name}] found more than one clock, picking the first one: " + clocks.map(_.serialize).mkString(", "))
+    if (clocks.length > 1) {
+      logger.warn(
+        s"WARN: [${mod.name}] found more than one clock, picking the first one: " + clocks
+          .map(_.serialize)
+          .mkString(", ")
+      )
     }
     clocks.headOption
   }
@@ -40,10 +48,10 @@ object Builder {
   }
 
   def refToTarget(module: IsModule, ref: ir.RefLikeExpression): ReferenceTarget = ref match {
-    case ir.Reference(name, _, _, _) => module.ref(name)
-    case ir.SubField(expr, name, _, _) => refToTarget(module, expr.asInstanceOf[ir.RefLikeExpression]).field(name)
+    case ir.Reference(name, _, _, _)    => module.ref(name)
+    case ir.SubField(expr, name, _, _)  => refToTarget(module, expr.asInstanceOf[ir.RefLikeExpression]).field(name)
     case ir.SubIndex(expr, value, _, _) => refToTarget(module, expr.asInstanceOf[ir.RefLikeExpression]).index(value)
-    case other => throw new RuntimeException(s"Unsupported reference expression: $other")
+    case other                          => throw new RuntimeException(s"Unsupported reference expression: $other")
   }
 
   private def flattenedPorts(ports: Seq[ir.Port]): Seq[ir.RefLikeExpression] = {
@@ -59,8 +67,11 @@ object Builder {
   /** Fails if there isn't exactly one reset input */
   def findReset(m: ir.Module): ir.RefLikeExpression = {
     val resets = findResets(m)
-    assert(resets.length == 1, s"[${m.name}] This transformation only works if there is exactly one reset.\n" +
-      s"Found: ${resets.map(_.serialize)}\n")
+    assert(
+      resets.length == 1,
+      s"[${m.name}] This transformation only works if there is exactly one reset.\n" +
+        s"Found: ${resets.map(_.serialize)}\n"
+    )
     resets.head
   }
 
@@ -106,7 +117,7 @@ object Builder {
     clock: ir.Expression,
     next:  ir.Expression,
     reset: ir.Expression = Utils.False(),
-    init:  Option[ir.Expression] = None,
+    init:  Option[ir.Expression] = None
   ): ir.Reference = {
     if (isAsyncReset(reset)) {
       val initExpr = init.getOrElse(ir.Reference(name, tpe, RegKind))
@@ -119,7 +130,7 @@ object Builder {
       stmts.append(ir.DefRegister(info, name, tpe, clock, Utils.False(), ref))
       init match {
         case Some(value) => stmts.append(ir.Connect(info, ref, Utils.mux(reset, value, next)))
-        case None => stmts.append(ir.Connect(info, ref, next))
+        case None        => stmts.append(ir.Connect(info, ref, next))
       }
       ref
     }
@@ -132,8 +143,8 @@ object Builder {
 
   def getKind(ref: ir.RefLikeExpression): firrtl.Kind = ref match {
     case ir.Reference(_, _, kind, _) => kind
-    case ir.SubField(expr, _, _, _) => getKind(expr.asInstanceOf[ir.RefLikeExpression])
-    case ir.SubIndex(expr, _, _, _) => getKind(expr.asInstanceOf[ir.RefLikeExpression])
+    case ir.SubField(expr, _, _, _)  => getKind(expr.asInstanceOf[ir.RefLikeExpression])
+    case ir.SubIndex(expr, _, _, _)  => getKind(expr.asInstanceOf[ir.RefLikeExpression])
     case ir.SubAccess(expr, _, _, _) => getKind(expr.asInstanceOf[ir.RefLikeExpression])
   }
 }

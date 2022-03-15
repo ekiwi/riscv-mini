@@ -15,9 +15,7 @@ object Main extends App {
   new chisel3.stage.ChiselStage().execute(
     Array("-ll", "info", "-E", "sverilog"),
     Seq(
-      ChiselGeneratorAnnotation(() =>
-        new TileAndMemTop(config)
-      ),
+      ChiselGeneratorAnnotation(() => new TileAndMemTop(config)),
       TargetDirAnnotation(targetDirectory),
       // we do not want to deduplicate modules because their signals might be covered differently
       NoCircuitDedupAnnotation,
