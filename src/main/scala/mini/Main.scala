@@ -14,6 +14,8 @@ object Main extends App {
   val config = MiniConfig()
   new chisel3.stage.ChiselStage().execute(
     Array("-ll", "info", "-E", "sverilog"),
+    // TODO: add auto reset (remove toplevel reset and drive reset to be 1 initially and then 0) +
+    //       do not initialize the harness memory (_mem) with zeros!
     Seq(
       ChiselGeneratorAnnotation(() => new TileAndMemTop(config)),
       TargetDirAnnotation(targetDirectory),
