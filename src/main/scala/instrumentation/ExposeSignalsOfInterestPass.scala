@@ -83,6 +83,7 @@ object ExposeSignalsOfInterestPass extends Transform with DependencyAPIMigration
     ports.map(p => DontTouchAnnotation(m.ref(p.name))).foreach(annos.append(_))
 
     val trackerModule = ir.Module(ir.NoInfo, signalTrackerName, ports, ir.EmptyStmt)
+    annos.append(SignalTrackerAnnotation(m))
 
     // create instance in main module
     val (mainModDef, otherModules) = circuit.modules.partition(_.name == circuit.main)
@@ -149,6 +150,8 @@ object ExposeSignalsOfInterestPass extends Transform with DependencyAPIMigration
       val targ = CircuitTarget(target.circuit).module(target.leafModule).ref(signal)
       val source = wiring.SourceAnnotation(targ.toNamed, s"$WiringPrefix$id")
       annos.append(source)
+      // make sure the signal persists
+      annos.append(DontTouchAnnotation(targ))
       val fullName = targetToName(targ).replace('.', '_')
       fullName -> id
     }
