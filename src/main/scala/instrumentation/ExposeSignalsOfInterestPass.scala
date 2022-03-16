@@ -112,12 +112,18 @@ object ExposeSignalsOfInterestPass extends Transform with DependencyAPIMigration
           val wireName = mainNames.newName(name)
           val target = mainM.ref(wireName)
           annos.append(wiring.SinkAnnotation(target.toNamed, s"$WiringPrefix$cc"))
+          annos.append(DontTouchAnnotation(target))
           Seq(
             ir.DefWire(ir.NoInfo, wireName, Utils.BoolType),
             ir.Connect(
               ir.NoInfo,
               ir.SubField(instanceRef, name, Utils.BoolType, SinkFlow),
               ir.Reference(wireName, Utils.BoolType, WireKind, SourceFlow)
+            ),
+            ir.Connect(
+              ir.NoInfo,
+              ir.Reference(wireName, Utils.BoolType, WireKind, SinkFlow),
+              Utils.False()
             )
           )
       }
@@ -159,11 +165,11 @@ object ExposeSignalsOfInterestPass extends Transform with DependencyAPIMigration
   private def targetToName(target: ReferenceTarget): String = {
     val moduleString = target.moduleOpt.getOrElse("")
     val tokensString = target.tokens.map {
-      case Ref(r)               => s".$r"
-      case Instance(i)          => s".$i"
-      case TargetToken.Field(f) => s".$f"
-      case Index(v)             => s"[$v]"
-      case _                    => ""
+      case Ref(r)                    => s".$r"
+      case Instance(i) if i.nonEmpty => s".$i"
+      case TargetToken.Field(f)      => s".$f"
+      case Index(v)                  => s"[$v]"
+      case _                         => ""
     }.mkString("")
     if (moduleString.isEmpty) {
       tokensString
