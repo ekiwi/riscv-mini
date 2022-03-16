@@ -21,6 +21,7 @@ object Main extends App {
       NoCircuitDedupAnnotation,
       // expose all mux toggle signals
       RunFirrtlTransformAnnotation(Dependency(ExposeSignalsOfInterestPass)),
+      RunFirrtlTransformAnnotation(Dependency(CoverTrackedSignalsPass)),
       // wire up signals
       RunFirrtlTransformAnnotation(Dependency[firrtl.passes.wiring.WiringTransform]),
       // make sure that all memories and registers are initialized to zero

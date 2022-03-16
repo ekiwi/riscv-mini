@@ -3,7 +3,7 @@ package instrumentation
 import firrtl._
 import firrtl.analyses.InstanceKeyGraph
 import firrtl.analyses.InstanceKeyGraph.InstanceKey
-import firrtl.annotations.TargetToken.{Clock, Index, Init, Instance, OfModule, Ref, Reset}
+import firrtl.annotations.TargetToken.{Index, Instance, Ref}
 import firrtl.annotations._
 import firrtl.options.Dependency
 import firrtl.stage.Forms
