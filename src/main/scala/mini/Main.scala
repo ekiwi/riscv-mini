@@ -3,10 +3,11 @@
 package mini
 
 import chisel3.stage.ChiselGeneratorAnnotation
+import firrtl.annotations.CircuitTarget
 import firrtl.options.{Dependency, TargetDirAnnotation}
 import firrtl.passes.memlib.VerilogMemDelays
 import firrtl.stage.RunFirrtlTransformAnnotation
-import firrtl.transforms.NoCircuitDedupAnnotation
+import firrtl.transforms.{NoCircuitDedupAnnotation, PropagatePresetAnnotations}
 import instrumentation._
 
 object Main extends App {
@@ -26,8 +27,13 @@ object Main extends App {
       RunFirrtlTransformAnnotation(Dependency(CoverTrackedSignalsPass)),
       // wire up signals
       RunFirrtlTransformAnnotation(Dependency[firrtl.passes.wiring.WiringTransform]),
+      // drive reset to one and then to zero after
+      RunFirrtlTransformAnnotation(Dependency(AddResetDriverPass)),
+      RunFirrtlTransformAnnotation(Dependency[PropagatePresetAnnotations]), // required by rest driver pass
       // make sure that all memories and registers are initialized to zero
       RunFirrtlTransformAnnotation(Dependency(InitialStateValuePass)),
+      // leave `_mem` main memory unconstrained
+      DoNotInitAnnotation(CircuitTarget("TileAndMemTop").module("TileAndMemTop").ref("_mem")),
       // we have to schedule this pass explicitly in order to make sure that the initial state value pass can run _after_
       RunFirrtlTransformAnnotation(Dependency(VerilogMemDelays))
     )

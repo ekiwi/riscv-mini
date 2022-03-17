@@ -12,8 +12,8 @@ case class ResetOption(cycles: Int = 1) extends NoTargetAnnotation {
   require(cycles >= 0, "The number of cycles must not be negative!")
 }
 
-/** adds an assumption to the toplevel module that all resets are active in the first cycle */
-private object AddResetAssumptionPass extends Transform with DependencyAPIMigration {
+/** adds reset driver to the toplevel module that all resets are active in the first cycle */
+object AddResetDriverPass extends Transform with DependencyAPIMigration {
   // run on lowered firrtl
   override def prerequisites = Seq(
     Dependency(firrtl.passes.ExpandWhens),
@@ -23,10 +23,9 @@ private object AddResetAssumptionPass extends Transform with DependencyAPIMigrat
     Dependency[firrtl.transforms.DeadCodeElimination]
   )
   override def invalidates(a: Transform) = false
-  // since we generate PresetRegAnnotations, we need to run after preset propagation
-  override def optionalPrerequisites = Seq(Dependency[PropagatePresetAnnotations])
   // we want to run before the actual Verilog is emitted
-  override def optionalPrerequisiteOf = firrtl.stage.Forms.BackendEmitters
+  override def optionalPrerequisiteOf =
+    Seq(Dependency[PropagatePresetAnnotations]) ++ firrtl.stage.Forms.BackendEmitters
   override def execute(state: CircuitState): CircuitState = {
     val resetLength = getResetLength(state.annotations)
     if (resetLength == 0 || resetIsPreset(state.circuit.main, state.annotations)) return state
@@ -50,20 +49,15 @@ private object AddResetAssumptionPass extends Transform with DependencyAPIMigrat
       ir.Reference(preset).copy(flow = SourceFlow)
     )
 
-    // add assumption that reset is active
-    val resetActive = ir.Verification(
-      ir.Formal.Assume,
-      ir.NoInfo,
-      clock,
-      pred = reset,
-      en = resetPhaseRef,
-      msg = ir.StringLit(""),
-      name = namespace.newName("_resetActive")
-    )
+    // drive reset
+    val resetNode = ir.DefNode(ir.NoInfo, "reset", resetPhaseRef)
+
+    // remove original reset port
+    val ports = main.ports.filterNot(_.name == "reset") :+ preset
 
     // collect all our statements and add them to the main module
-    val stmts = counterStmts :+ resetActive
-    val instrumented = main.copy(ports = main.ports :+ preset, body = ir.Block(main.body +: stmts))
+    val stmts = counterStmts :+ resetNode :+ main.body
+    val instrumented = main.copy(ports = ports, body = ir.Block(stmts))
 
     // substitute instrumented main and add annotations
     val otherMods = state.circuit.modules.filterNot(_.name == state.circuit.main)

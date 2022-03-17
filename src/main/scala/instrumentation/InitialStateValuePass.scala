@@ -1,20 +1,18 @@
 package instrumentation
 
 import firrtl._
-import firrtl.annotations.{
-  Annotation,
-  CircuitTarget,
-  MemoryArrayInitAnnotation,
-  MemoryScalarInitAnnotation,
-  ModuleTarget,
-  PresetRegAnnotation
-}
+import firrtl.annotations._
 import firrtl.options.Dependency
 import firrtl.passes.memlib.VerilogMemDelays
 import firrtl.stage.Forms
-import firrtl.transforms.{PropagatePresetAnnotations}
+import firrtl.transforms.PropagatePresetAnnotations
 
 import scala.collection.mutable
+
+/** marks a memory or register that should not be initialized by the [[InitialStateValuePass]] */
+case class DoNotInitAnnotation(target: ReferenceTarget) extends SingleTargetAnnotation[ReferenceTarget] {
+  override def duplicate(n: ReferenceTarget): DoNotInitAnnotation = DoNotInitAnnotation(n)
+}
 
 /** ensures that every state is assigned an initial value */
 object InitialStateValuePass extends Transform with DependencyAPIMigration {
@@ -37,6 +35,8 @@ object InitialStateValuePass extends Transform with DependencyAPIMigration {
       case MemoryScalarInitAnnotation(t, _) if t.circuit == main =>
         t.module -> t.ref
       case MemoryArrayInitAnnotation(t, _) if t.circuit == main =>
+        t.module -> t.ref
+      case DoNotInitAnnotation(t) if t.circuit == main =>
         t.module -> t.ref
     }.groupBy(_._1)
 
