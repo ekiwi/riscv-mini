@@ -15,18 +15,17 @@ object Main extends App {
   val config = MiniConfig()
   new chisel3.stage.ChiselStage().execute(
     Array("-ll", "info", "-E", "sverilog"),
-    // TODO: add auto reset (remove toplevel reset and drive reset to be 1 initially and then 0) +
-    //       do not initialize the harness memory (_mem) with zeros!
     Seq(
       ChiselGeneratorAnnotation(() => new TileAndMemTop(config)),
       TargetDirAnnotation(targetDirectory),
       // we do not want to deduplicate modules because their signals might be covered differently
       NoCircuitDedupAnnotation,
       // expose all mux toggle signals
-      RunFirrtlTransformAnnotation(Dependency(ExposeSignalsOfInterestPass)),
+      // RunFirrtlTransformAnnotation(Dependency(ExposeSignalsOfInterestPass)),
+      RunFirrtlTransformAnnotation(Dependency(NewExposeSignalsOfInterestPass)),
       RunFirrtlTransformAnnotation(Dependency(CoverTrackedSignalsPass)),
       // wire up signals
-      RunFirrtlTransformAnnotation(Dependency[firrtl.passes.wiring.WiringTransform]),
+      // RunFirrtlTransformAnnotation(Dependency[firrtl.passes.wiring.WiringTransform]),
       // drive reset to one and then to zero after
       RunFirrtlTransformAnnotation(Dependency(AddResetDriverPass)),
       RunFirrtlTransformAnnotation(Dependency[PropagatePresetAnnotations]), // required by rest driver pass

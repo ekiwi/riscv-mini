@@ -5,7 +5,7 @@ import firrtl.options.Dependency
 
 object CoverTrackedSignalsPass extends Transform with DependencyAPIMigration {
   override def prerequisites = Seq(
-    Dependency(ExposeSignalsOfInterestPass)
+    Dependency(NewExposeSignalsOfInterestPass)
   )
   override def invalidates(a: Transform): Boolean = false
 
