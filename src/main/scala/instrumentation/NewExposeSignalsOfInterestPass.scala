@@ -8,10 +8,12 @@ import firrtl.stage.Forms
 
 import scala.collection.mutable
 
-/** Exposes all signals of interest in a top-level module with the use of the wiring pass. */
+/** Exposes all signals of interest in a top-level module without the use of the wiring pass. */
 object NewExposeSignalsOfInterestPass extends Transform with DependencyAPIMigration {
   val SignalTrackerDefaultName = "SignalTracker"
   val SignalTrackerDefaultInstanceName = "tracker"
+  /** the delimiter needs to be a valid identifier character. "_" does not work because it breaks the uniquify assumption */
+  val Delim = "__"
 
   override def prerequisites = Seq(
     Dependency[firrtl.transforms.RemoveWires],
@@ -73,10 +75,10 @@ object NewExposeSignalsOfInterestPass extends Transform with DependencyAPIMigrat
     val trackerPorts = Seq(
       ir.Port(ir.NoInfo, "clock", ir.Input, ir.ClockType),
       ir.Port(ir.NoInfo, "reset", ir.Input, Utils.BoolType)
-    ) ++ signals.map(r => ir.Port(ir.NoInfo, r.serialize.replace('.', '_'), ir.Input, r.tpe))
+    ) ++ signals.map(r => ir.Port(ir.NoInfo, r.serialize.replace(".", Delim), ir.Input, r.tpe))
 
     // create signal tracker
-    val trackerMod = ir.Module(ir.NoInfo, signalTrackerName, trackerPorts, ir.EmptyStmt)
+    val trackerMod = ir.ExtModule(ir.NoInfo, signalTrackerName, trackerPorts, signalTrackerName, Seq())
 
     // create signal tracker instance
     val trackerInstance = ir.DefInstance(
@@ -104,7 +106,7 @@ object NewExposeSignalsOfInterestPass extends Transform with DependencyAPIMigrat
 
       // create ports
       val refsAndPorts = signals.map { r =>
-        val name = namespace.newName(r.serialize.replace('.', '_'))
+        val name = namespace.newName(r.serialize.replace(".", Delim))
         r -> ir.Port(ir.NoInfo, name, ir.Output, r.tpe)
       }
       val ports = m.ports ++ refsAndPorts.map(_._2)

@@ -21,11 +21,7 @@ object Main extends App {
       // we do not want to deduplicate modules because their signals might be covered differently
       NoCircuitDedupAnnotation,
       // expose all mux toggle signals
-      // RunFirrtlTransformAnnotation(Dependency(ExposeSignalsOfInterestPass)),
       RunFirrtlTransformAnnotation(Dependency(NewExposeSignalsOfInterestPass)),
-      RunFirrtlTransformAnnotation(Dependency(CoverTrackedSignalsPass)),
-      // wire up signals
-      // RunFirrtlTransformAnnotation(Dependency[firrtl.passes.wiring.WiringTransform]),
       // drive reset to one and then to zero after
       RunFirrtlTransformAnnotation(Dependency(AddResetDriverPass)),
       RunFirrtlTransformAnnotation(Dependency[PropagatePresetAnnotations]), // required by rest driver pass
