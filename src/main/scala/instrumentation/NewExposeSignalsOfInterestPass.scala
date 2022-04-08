@@ -132,8 +132,8 @@ object NewExposeSignalsOfInterestPass extends Transform with DependencyAPIMigrat
     val body = patchInstances(getInfo, instanceSignals)(m.body)
 
     // find local signals of interest
-    val localSignals = findMuxConditions(m)
-    val (nodes, localSignalRefs) = expressionsToRefs(namespace, "mux", localSignals.map(_._1))
+    val (localSignals, body2) = findMuxConditions(body)
+    val (nodes, localSignalRefs) = expressionsToRefs(namespace, "cover", localSignals.map(_._1))
 
     println(s"In ${m.name}")
     localSignals.foreach { s =>
@@ -141,7 +141,7 @@ object NewExposeSignalsOfInterestPass extends Transform with DependencyAPIMigrat
     }
     println()
 
-    (ir.Block(body, nodes), instanceSignals.toList ++ localSignalRefs)
+    (ir.Block(body2, nodes), instanceSignals.toList ++ localSignalRefs)
   }
 
   private def patchInstances(
@@ -178,7 +178,7 @@ object NewExposeSignalsOfInterestPass extends Transform with DependencyAPIMigrat
   }
 
   // returns a list of unique (at least structurally unique!) mux conditions used in the module
-  private def findMuxConditions(m: ir.Module): Seq[(ir.Expression, String)] = {
+  private def findMuxConditions(body: ir.Statement): (Seq[(ir.Expression, String)], ir.Statement) = {
     val conds = mutable.LinkedHashMap[String, ir.Expression]()
     val netlist = mutable.HashMap[String, ir.Expression]()
 
@@ -209,8 +209,9 @@ object NewExposeSignalsOfInterestPass extends Transform with DependencyAPIMigrat
         case _ =>
       }
     }
-    onStmt(m.body)
-    conds.toList.map{ case (n,e) => (e,n)}.sortBy(_._2)
+    onStmt(body)
+    val condList = conds.toList.map{ case (n,e) => (e,n)}.sortBy(_._2)
+    (condList, body)
   }
 
 }
