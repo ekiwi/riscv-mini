@@ -58,7 +58,7 @@ object NewExposeSignalsOfInterestPass extends Transform with DependencyAPIMigrat
       SignalTrackerAnnotation(CircuitTarget(circuit.main).module(signalTrackerName))
     )
 
-    println(circuit.serialize)
+    // println(circuit.serialize)
 
     state.copy(circuit = circuit, annotations = newAnnos ++: state.annotations)
   }
@@ -133,7 +133,13 @@ object NewExposeSignalsOfInterestPass extends Transform with DependencyAPIMigrat
 
     // find local signals of interest
     val localSignals = findMuxConditions(m)
-    val (nodes, localSignalRefs) = expressionsToRefs(namespace, "mux", localSignals)
+    val (nodes, localSignalRefs) = expressionsToRefs(namespace, "mux", localSignals.map(_._1))
+
+    println(s"In ${m.name}")
+    localSignals.foreach { s =>
+     println(s"${s._1.serialize}: ${s._2}")
+    }
+    println()
 
     (ir.Block(body, nodes), instanceSignals.toList ++ localSignalRefs)
   }
@@ -172,26 +178,39 @@ object NewExposeSignalsOfInterestPass extends Transform with DependencyAPIMigrat
   }
 
   // returns a list of unique (at least structurally unique!) mux conditions used in the module
-  private def findMuxConditions(m: ir.Module): List[ir.Expression] = {
+  private def findMuxConditions(m: ir.Module): Seq[(ir.Expression, String)] = {
     val conds = mutable.LinkedHashMap[String, ir.Expression]()
+    val netlist = mutable.HashMap[String, ir.Expression]()
 
     def onStmt(s: ir.Statement): Unit = s match {
       case ir.Block(stmts) => stmts.foreach(onStmt)
+      case ir.DefNode(_, name, value) => netlist(name) = value ; onExpr(value)
       case other           => other.foreachExpr(onExpr)
+    }
+    def expand(e: ir.Expression): ir.Expression = e match {
+      case e : ir.RefLikeExpression =>
+        netlist.get(e.serialize) match {
+          case Some(value) => expand(value)
+          case None => e
+        }
+      case other => other.mapExpr(expand)
     }
     def onExpr(e: ir.Expression): Unit = {
       e.foreachExpr(onExpr)
       e match {
         case ir.Mux(cond, _, _, _) =>
-          val key = cond.serialize
-          // ignore reset signal
-          if (key != "reset") {
-            conds(key) = cond
+          cond match {
+            case ir.Reference(name, _, _, _) if name == "reset" => // ignore
+            case _: ir.UIntLiteral => // ignore
+            case _ =>
+              val key = expand(cond).serialize
+              conds(key) = cond
           }
         case _ =>
       }
     }
     onStmt(m.body)
-    conds.values.toList
+    conds.toList.map{ case (n,e) => (e,n)}.sortBy(_._2)
   }
+
 }
