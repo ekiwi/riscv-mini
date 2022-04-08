@@ -21,6 +21,8 @@ object Main extends App {
       // we do not want to deduplicate modules because their signals might be covered differently
       NoCircuitDedupAnnotation,
       // expose all mux toggle signals
+      RunFirrtlTransformAnnotation(Dependency(MuxControlSignalPass)),
+      RunFirrtlTransformAnnotation(Dependency(LineCoverPass)),
       RunFirrtlTransformAnnotation(Dependency(NewExposeSignalsOfInterestPass)),
       // drive reset to one and then to zero after
       RunFirrtlTransformAnnotation(Dependency(AddResetDriverPass)),

@@ -3,6 +3,7 @@ package instrumentation
 import firrtl._
 import firrtl.analyses.InstanceKeyGraph
 import firrtl.annotations.CircuitTarget
+import firrtl.ir.UIntLiteral
 import firrtl.options.Dependency
 import firrtl.stage.Forms
 
@@ -29,8 +30,8 @@ object NewExposeSignalsOfInterestPass extends Transform with DependencyAPIMigrat
   )
 
   // need to run _before_ optimizations, because otherwise, the whole circuit might be dead code eliminated
-  override def optionalPrerequisiteOf = Forms.LowEmitters ++ Optimizations
-  override def optionalPrerequisites = Seq()
+  override def optionalPrerequisiteOf = Forms.LowEmitters
+  override def optionalPrerequisites = Optimizations
 
   override def execute(state: CircuitState): CircuitState = {
     // determine the name of the tracker module
@@ -132,7 +133,7 @@ object NewExposeSignalsOfInterestPass extends Transform with DependencyAPIMigrat
     val body = patchInstances(getInfo, instanceSignals)(m.body)
 
     // find local signals of interest
-    val (localSignals, body2) = findMuxConditions(body)
+    val (localSignals, body2) = findCoverConditions(body)
     val (nodes, localSignalRefs) = expressionsToRefs(namespace, "cover", localSignals.map(_._1))
 
     println(s"In ${m.name}")
@@ -178,14 +179,28 @@ object NewExposeSignalsOfInterestPass extends Transform with DependencyAPIMigrat
   }
 
   // returns a list of unique (at least structurally unique!) mux conditions used in the module
-  private def findMuxConditions(body: ir.Statement): (Seq[(ir.Expression, String)], ir.Statement) = {
+  private def findCoverConditions(body: ir.Statement): (Seq[(ir.Expression, String)], ir.Statement) = {
     val conds = mutable.LinkedHashMap[String, ir.Expression]()
     val netlist = mutable.HashMap[String, ir.Expression]()
 
-    def onStmt(s: ir.Statement): Unit = s match {
-      case ir.Block(stmts) => stmts.foreach(onStmt)
-      case ir.DefNode(_, name, value) => netlist(name) = value ; onExpr(value)
-      case other           => other.foreachExpr(onExpr)
+    def onStmt(s: ir.Statement): ir.Statement = s match {
+      case n @ ir.DefNode(_, name, value) =>
+        netlist(name) = value
+        n
+      case v : ir.Verification if v.op == ir.Formal.Cover =>
+        v.en match {
+          case Utils.False() => // never enabled
+          case other =>
+            val cond = Utils.implies(other, v.pred)
+            cond match {
+              case _: UIntLiteral => // ignore
+              case cond =>
+                val key = expand(cond).serialize
+                conds(key) = cond
+            }
+        }
+        ir.EmptyStmt
+      case other  => other.mapStmt(onStmt)
     }
     def expand(e: ir.Expression): ir.Expression = e match {
       case e : ir.RefLikeExpression =>
@@ -195,23 +210,8 @@ object NewExposeSignalsOfInterestPass extends Transform with DependencyAPIMigrat
         }
       case other => other.mapExpr(expand)
     }
-    def onExpr(e: ir.Expression): Unit = {
-      e.foreachExpr(onExpr)
-      e match {
-        case ir.Mux(cond, _, _, _) =>
-          cond match {
-            case ir.Reference(name, _, _, _) if name == "reset" => // ignore
-            case _: ir.UIntLiteral => // ignore
-            case _ =>
-              val key = expand(cond).serialize
-              conds(key) = cond
-          }
-        case _ =>
-      }
-    }
-    onStmt(body)
+    val body2 = onStmt(body)
     val condList = conds.toList.map{ case (n,e) => (e,n)}.sortBy(_._2)
-    (condList, body)
+    (condList, body2)
   }
-
 }
